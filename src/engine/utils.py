@@ -216,14 +216,3 @@ def setup_time_range_split(data, last_date_col="last_watch_dt", folds=3):
 def map_item_titles(items_df):
     """Map item IDs to titles."""
     return pd.Series(items_df["title"].values, index=items_df["item_id"]).to_dict()
-
-
-def load_data():
-    users_df = pd.read_csv(PROCESSED_DATA_PATH / "users_processed.csv")
-    items_df = pd.read_csv(PROCESSED_DATA_PATH / "items_processed.csv")
-    interactions_df = pd.read_csv(
-        PROCESSED_DATA_PATH / "interactions_processed.csv", 
-        parse_dates=["last_watch_dt"],
-    )
-
-    return users_df, items_df, interactions_df

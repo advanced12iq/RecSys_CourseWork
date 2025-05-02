@@ -1,6 +1,9 @@
-from src.engine.processing import process_data
-from src.engine.utils import load_data
+from src.engine.processing import process_data, load_data
 from src.engine.methods import validate_model, PopularRecommender, validate_tfidf_model, validate_socdem_model
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def generate_recs():
     last_date = "2023-01-01"
@@ -10,6 +13,7 @@ def generate_recs():
     # print(results)
     # results = validate_tfidf_model(interactions_df, users_df)
     print(results)
+
 
 def main():
     generate_recs()
