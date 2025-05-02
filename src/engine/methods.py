@@ -6,25 +6,19 @@ from implicit.nearest_neighbours import TFIDFRecommender
 from src.engine.utils import compute_metrics, get_coo_matrix, setup_time_range_split
 
 
-def generate_implicit_recs_mapper(
-    model,
-    train_matrix,
-    top_N,
-    user_mapping,
-    item_inv_mapping,
-    filter_already_liked_items,
-):
-    def _recs_mapper(user):
-        user_id = user_mapping[user]
-        recs = model.recommend(
-            user_id,
-            train_matrix,
-            N=top_N,
-            filter_already_liked_items=filter_already_liked_items,
-        )
-        return [item_inv_mapping[item] for item, _ in recs]
+from functools import lru_cache
 
-    return _recs_mapper
+@lru_cache(maxsize=128)
+def generate_implicit_recs_mapper_cached(
+    user_id, model, train_matrix, top_N, item_inv_mapping, filter_already_liked_items
+):
+    recs = model.recommend(
+        user_id,
+        train_matrix,
+        N=top_N,
+        filter_already_liked_items=filter_already_liked_items
+    )
+    return [item_inv_mapping[item] for item, _ in recs]
 
 
 class PopularRecommender:
@@ -206,7 +200,7 @@ def validate_tfidf_model(interactions_df, top_N=10, window_days=60):
         model.fit(train_mat.T)
 
         # Generate recommendations
-        mapper = generate_implicit_recs_mapper(
+        mapper = generate_implicit_recs_mapper_cached(
             model, train_mat, top_N, users_mapping, items_inv_mapping, True
         )
         recs = pd.DataFrame({"user_id": test_window["user_id"].unique()})
