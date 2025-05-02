@@ -5,10 +5,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import pandas as pd
-from typing import List
 from src.config import RAW_DATA_PATH, PROCESSED_DATA_PATH
 
-def process_data(processed_indices: List[int], last_date):
+
+def process_data(last_date):
     # Convert last_date to pandas Timestamp for comparison
     last_date = pd.to_datetime(last_date)
 
@@ -19,13 +19,27 @@ def process_data(processed_indices: List[int], last_date):
     users_df = pd.read_csv(RAW_DATA_PATH / "users.csv")
     items_df = pd.read_csv(RAW_DATA_PATH / "items.csv")
     interactions_df = pd.read_csv(
-        RAW_DATA_PATH / "interactions.csv", 
+        RAW_DATA_PATH / "interactions.csv",
         parse_dates=["last_watch_dt"],
-        index_col='id'
+        index_col=["user_id", "item_id"],
     )
-    
-    mask = ~interactions_df.index.isin(processed_indices) & (interactions_df['last_watch_dt'].apply(pd.to_datetime) < last_date)
-    new_indices = interactions_df[mask].index.tolist()
+
+    processed_path = PROCESSED_DATA_PATH / "interactions_processed.csv"
+    old_interactions = (
+        pd.read_csv(
+            processed_path,
+            parse_dates=["last_watch_dt"],
+            index_col=["user_id", "item_id"],
+        )
+        if processed_path.exists()
+        else pd.DataFrame()
+    )
+    processed_indices = old_interactions.index
+
+    mask = ~interactions_df.index.isin(processed_indices) & (
+        interactions_df["last_watch_dt"].apply(pd.to_datetime) < last_date
+    )
+
     interactions_df = interactions_df[mask]
 
     # --- Users Preprocessing ---
@@ -91,7 +105,10 @@ def process_data(processed_indices: List[int], last_date):
     # --- Save Processed Files ---
     users_df.to_csv(PROCESSED_DATA_PATH / "users_processed.csv", index=False)
     items_df.to_csv(PROCESSED_DATA_PATH / "items_processed.csv", index=False)
-    interactions_df.to_csv(PROCESSED_DATA_PATH / "interactions_processed.csv", index=False)
+    interactions_df = pd.concat([old_interactions, interactions_df], axis=0)
+    interactions_df.to_csv(
+        PROCESSED_DATA_PATH / "interactions_processed.csv", index=True
+    )
 
     # --- Return updated list of processed indices ---
-    return processed_indices + new_indices
+    return interactions_df.index
