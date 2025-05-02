@@ -22,7 +22,7 @@ def generate_implicit_recs_mapper_cached(
 
 
 class PopularRecommender:
-    def __init__(self, max_K=10, days=30, item_column="item_id", dt_column="date"):
+    def __init__(self, max_K=10, days=30, item_column="item_id", dt_column="last_watch_dt"):
         self.max_K = max_K
         self.days = days
         self.item_column = item_column
