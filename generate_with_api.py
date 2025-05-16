@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import logging
 import pandas as pd
-from src.engine.methods import PopularRecommender, validate_model, generate_socdem_recommendations
+from src.engine.methods import PopularRecommender, validate_model, generate_socdem_recommendations, HybridRecommender, FactorizationMachineRecommender, ContentBasedFaissRecommender
 from src.engine.processing import load_data
 import os
 
@@ -69,10 +69,27 @@ def get_recommendations():
                 result = [{'item_id': str(item)} for item in recs[0]]
             else:
                 result = [{'item_id': str(item)} for item in filtered.iloc[0]['item_id']]
-                
+        elif method == 'hybrid':
+            # Initialize hybrid model
+            _, _, interactions_df = load_data()
+
+            base_recs = [PopularRecommender(days=7)]
+            content_rec = ContentBasedFaissRecommender(days=7)
+            fm_rec = FactorizationMachineRecommender(days=7)
+
+            hybrid_rec = HybridRecommender(
+                base_recommenders=base_recs,
+                content_recommender=content_rec,
+                fm_recommender=fm_rec,
+                top_n=100,
+                final_top_n=top_n
+            )
+            hybrid_rec.fit(interactions_df)
+            recs = hybrid_rec.recommend([int(user_id)])
+            result = [{'item_id': str(item)} for item in recs[0]]
         else:
             return jsonify({
-                'error': f'Unknown method: {method}. Available methods: "popular", "socdem"'
+                'error': f'Unknown method: {method}. Available methods: "popular", "socdem", "hybrid"'
             }), 400
             
         return jsonify(result)
@@ -80,6 +97,7 @@ def get_recommendations():
     except Exception as e:
         app.logger.error(f"Error generating recommendations: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+    
 
 if __name__ == '__main__':
     initialize_models()
